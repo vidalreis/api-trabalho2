@@ -1,0 +1,181 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum Role {
+  gerente
+  contador
+  dono
+}
+
+enum CompanyStatus {
+  ativo
+  inativo
+}
+
+enum Priority {
+  baixa
+  media
+  alta
+}
+
+enum TaskStatus {
+  pendente
+  em_progresso
+  concluida
+  cancelada
+}
+
+// ─────────────────────────────────────────────
+// MODELOS
+// ─────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  demands             Demand[]             @relation("AssignedDemands")
+  templatesCreated    ChecklistTemplate[]  @relation("CreatedTemplates")
+  assignmentsReceived ChecklistAssignment[] @relation("AssignedTo")
+  assignmentsGiven    ChecklistAssignment[] @relation("AssignedBy")
+}
+
+model Company {
+  id        String        @id @default(uuid())
+  name      String
+  cnpj      String        @unique
+  status    CompanyStatus @default(ativo)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // Relações
+  checklists   Checklist[]
+  demands      Demand[]
+  assignments  ChecklistAssignment[]
+}
+
+model Checklist {
+  id          String   @id @default(uuid())
+  title       String
+  serviceType String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Chave estrangeira
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  // Itens do checklist (tabela separada)
+  items ChecklistItem[]
+}
+
+model ChecklistItem {
+  id          String   @id @default(uuid())
+  title       String
+  completed   Boolean  @default(false)
+  priority    Priority @default(media)
+  assignedTo  String?  // email ou id do usuário responsável pelo item
+
+  // Chave estrangeira
+  checklistId String
+  checklist   Checklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+}
+
+model Demand {
+  id          String     @id @default(uuid())
+  title       String
+  description String
+  status      TaskStatus @default(pendente)
+  priority    Priority   @default(media)
+  dueDate     DateTime
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Chaves estrangeiras
+  assignedToId String
+  assignedTo   User    @relation("AssignedDemands", fields: [assignedToId], references: [id])
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+}
+
+model ChecklistTemplate {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Chave estrangeira
+  createdById String
+  createdBy   User   @relation("CreatedTemplates", fields: [createdById], references: [id])
+
+  // Itens do template (tabela separada)
+  items       ChecklistTemplateItem[]
+  assignments ChecklistAssignment[]
+}
+
+model ChecklistTemplateItem {
+  id       String   @id @default(uuid())
+  title    String
+  priority Priority @default(media)
+
+  // Chave estrangeira
+  templateId String
+  template   ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+}
+
+model ChecklistAssignment {
+  id        String     @id @default(uuid())
+  status    TaskStatus @default(pendente)
+  dueDate   DateTime
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Chaves estrangeiras
+  templateId String
+  template   ChecklistTemplate @relation(fields: [templateId], references: [id])
+
+  assignedToId String
+  assignedTo   User   @relation("AssignedTo", fields: [assignedToId], references: [id])
+
+  assignedById String
+  assignedBy   User   @relation("AssignedBy", fields: [assignedById], references: [id])
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  // Itens do assignment (cópia dos itens do template, com progresso)
+  items ChecklistAssignmentItem[]
+}
+
+model ChecklistAssignmentItem {
+  id         String   @id @default(uuid())
+  title      String
+  completed  Boolean  @default(false)
+  priority   Priority @default(media)
+  assignedTo String?  // email ou id do responsável pelo item
+
+  // Chave estrangeira
+  assignmentId String
+  assignment   ChecklistAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+}
+
