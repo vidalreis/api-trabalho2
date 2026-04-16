@@ -2,17 +2,14 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma.js';
+import { validate } from '../middleware/auth.js';
+import { registerSchema, loginSchema } from '../schemas/index.js';
 
 const router = Router();
 
-// POST /api/auth/register
-router.post('/register', async (req: Request, res: Response) => {
-  const { name, email, password, role } = req.body;
-
-  if (!name || !email || !password || !role) {
-    res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
-    return;
-  }
+// ── POST /api/auth/register ──────────────────────────────────────────────────
+router.post('/register', validate(registerSchema), async (req: Request, res: Response) => {
+  const { name, email, password, role, avatar } = req.body;
 
   try {
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -23,7 +20,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, role },
+      data: { name, email, password: hashedPassword, role, avatar },
       select: { id: true, name: true, email: true, role: true, avatar: true, createdAt: true },
     });
 
@@ -34,14 +31,9 @@ router.post('/register', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/auth/login
-router.post('/login', async (req: Request, res: Response) => {
+// ── POST /api/auth/login ─────────────────────────────────────────────────────
+router.post('/login', validate(loginSchema), async (req: Request, res: Response) => {
   const { email, password } = req.body;
-
-  if (!email || !password) {
-    res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
-    return;
-  }
 
   try {
     const user = await prisma.user.findUnique({ where: { email } });

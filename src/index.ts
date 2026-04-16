@@ -14,12 +14,17 @@ import assignmentRoutes from './routes/assignments.js';
 const app = express();
 const PORT = process.env.PORT ?? 3001;
 
-// ── Middlewares globais ──────────────────────────────────────
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:8080'], credentials: true }));
+// ── Middlewares globais ───────────────────────────────────────────────────────
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production'
+    ? [process.env['CORS_ORIGIN'] ?? '*']
+    : ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:3000'],
+  credentials: true,
+}));
 app.use(helmet());
 app.use(express.json());
 
-// ── Rotas ────────────────────────────────────────────────────
+// ── Rotas ─────────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/companies', companyRoutes);
@@ -28,14 +33,28 @@ app.use('/api/checklists', checklistRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/assignments', assignmentRoutes);
 
-// ── Health check ─────────────────────────────────────────────
+// ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0',
+    database: 'SQLite',
+  });
 });
 
-// ── Start ─────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor Finode rodando em http://localhost:${PORT}`);
+// ── 404 handler ───────────────────────────────────────────────────────────────
+app.use((_req, res) => {
+  res.status(404).json({ error: 'Rota não encontrada.' });
 });
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor Finode rodando em http://localhost:${PORT}`);
+    console.log(`📊 Health: http://localhost:${PORT}/health`);
+    console.log(`🗂️  Banco: SQLite (${process.env.DATABASE_URL})`);
+  });
+}
 
 export default app;

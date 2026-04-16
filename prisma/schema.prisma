@@ -6,47 +6,25 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-}
-
-// ─────────────────────────────────────────────
-// ENUMS
-// ─────────────────────────────────────────────
-
-enum Role {
-  gerente
-  contador
-  dono
-}
-
-enum CompanyStatus {
-  ativo
-  inativo
-}
-
-enum Priority {
-  baixa
-  media
-  alta
-}
-
-enum TaskStatus {
-  pendente
-  em_progresso
-  concluida
-  cancelada
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 // ─────────────────────────────────────────────
 // MODELOS
 // ─────────────────────────────────────────────
 
+// Role: "gerente" | "contador" | "dono"
+// CompanyStatus: "ativo" | "inativo"
+// Priority: "baixa" | "media" | "alta"
+// TaskStatus: "pendente" | "em_progresso" | "concluida" | "cancelada"
+
 model User {
   id        String   @id @default(uuid())
   name      String
   email     String   @unique
   password  String
-  role      Role
+  role      String   @default("contador")
   avatar    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -59,17 +37,17 @@ model User {
 }
 
 model Company {
-  id        String        @id @default(uuid())
+  id        String   @id @default(uuid())
   name      String
-  cnpj      String        @unique
-  status    CompanyStatus @default(ativo)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  cnpj      String   @unique
+  status    String   @default("ativo")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relações
-  checklists   Checklist[]
-  demands      Demand[]
-  assignments  ChecklistAssignment[]
+  checklists  Checklist[]
+  demands     Demand[]
+  assignments ChecklistAssignment[]
 }
 
 model Checklist {
@@ -88,11 +66,11 @@ model Checklist {
 }
 
 model ChecklistItem {
-  id          String   @id @default(uuid())
-  title       String
-  completed   Boolean  @default(false)
-  priority    Priority @default(media)
-  assignedTo  String?  // email ou id do usuário responsável pelo item
+  id         String   @id @default(uuid())
+  title      String
+  completed  Boolean  @default(false)
+  priority   String   @default("media")
+  assignedTo String?
 
   // Chave estrangeira
   checklistId String
@@ -100,14 +78,14 @@ model ChecklistItem {
 }
 
 model Demand {
-  id          String     @id @default(uuid())
+  id          String   @id @default(uuid())
   title       String
   description String
-  status      TaskStatus @default(pendente)
-  priority    Priority   @default(media)
+  status      String   @default("pendente")
+  priority    String   @default("media")
   dueDate     DateTime
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Chaves estrangeiras
   assignedToId String
@@ -120,7 +98,7 @@ model Demand {
 model ChecklistTemplate {
   id          String   @id @default(uuid())
   title       String
-  description String
+  description String   @default("")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -134,9 +112,9 @@ model ChecklistTemplate {
 }
 
 model ChecklistTemplateItem {
-  id       String   @id @default(uuid())
+  id       String @id @default(uuid())
   title    String
-  priority Priority @default(media)
+  priority String @default("media")
 
   // Chave estrangeira
   templateId String
@@ -144,11 +122,11 @@ model ChecklistTemplateItem {
 }
 
 model ChecklistAssignment {
-  id        String     @id @default(uuid())
-  status    TaskStatus @default(pendente)
+  id        String   @id @default(uuid())
+  status    String   @default("pendente")
   dueDate   DateTime
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Chaves estrangeiras
   templateId String
@@ -168,14 +146,13 @@ model ChecklistAssignment {
 }
 
 model ChecklistAssignmentItem {
-  id         String   @id @default(uuid())
+  id         String  @id @default(uuid())
   title      String
-  completed  Boolean  @default(false)
-  priority   Priority @default(media)
-  assignedTo String?  // email ou id do responsável pelo item
+  completed  Boolean @default(false)
+  priority   String  @default("media")
+  assignedTo String?
 
   // Chave estrangeira
   assignmentId String
   assignment   ChecklistAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 }
-

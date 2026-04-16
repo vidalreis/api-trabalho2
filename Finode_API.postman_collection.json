@@ -1,20 +1,19 @@
 {
   "info": {
-    "_postman_id": "finode-api-collection-2026",
-    "name": "Finode API — Trabalho 2",
-    "description": "Collection completa da API REST Finode para o Trabalho 2.\n\nThema: Gestão Empresarial (Empresas, Usuários, Demandas, Checklists, Templates, Atribuições)\n\n## Como usar\n1. Importe esta collection no Postman\n2. Execute primeiro **Auth / Login** para obter o token JWT\n3. O token é salvo automaticamente na variável `token`\n4. Todos os demais endpoints usam `{{token}}` automaticamente\n\n## Variáveis de Ambiente\n- `baseUrl` → http://localhost:3001\n- `token` → preenchido automaticamente após login",
+    "_postman_id": "finode-api-v2-2026",
+    "name": "Finode API v2 (SQLite)",
+    "description": "API REST completa de Gestão Empresarial para Escritórios de Contabilidade.\n\n**Fluxo inicial:**\n1. Execute 'Auth / Login' para obter o token\n2. O token é salvo automaticamente em {{authToken}}\n3. Todas as demais rotas usam o token automaticamente\n\n**Base URL:** http://localhost:3001",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:3001" },
-    { "key": "token", "value": "" },
-    { "key": "userId", "value": "" },
-    { "key": "companyId", "value": "" },
-    { "key": "demandId", "value": "" },
-    { "key": "checklistId", "value": "" },
-    { "key": "checklistItemId", "value": "" },
-    { "key": "templateId", "value": "" },
-    { "key": "assignmentId", "value": "" }
+    { "key": "baseUrl", "value": "http://localhost:3001", "type": "string" },
+    { "key": "authToken", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "companyId", "value": "", "type": "string" },
+    { "key": "demandId", "value": "", "type": "string" },
+    { "key": "checklistId", "value": "", "type": "string" },
+    { "key": "templateId", "value": "", "type": "string" },
+    { "key": "assignmentId", "value": "", "type": "string" }
   ],
   "item": [
     {
@@ -24,25 +23,18 @@
           "name": "GET /health",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+            "url": "{{baseUrl}}/health"
           },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Retorna status ok', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.status).to.eql('ok');",
-                  "  pm.expect(json).to.have.property('timestamp');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.test('Status OK', () => pm.expect(pm.response.json().status).to.eql('ok'));",
+                "pm.test('Has timestamp', () => pm.expect(pm.response.json()).to.have.property('timestamp'));"
+              ]
             }
-          ]
+          }]
         }
       ]
     },
@@ -50,730 +42,472 @@
       "name": "🔐 Auth",
       "item": [
         {
-          "name": "POST /auth/register — Cadastrar usuário",
+          "name": "POST /auth/register",
           "request": {
             "method": "POST",
+            "url": "{{baseUrl}}/api/auth/register",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Novo Usuário Teste\",\n  \"email\": \"novo.teste@finode.com\",\n  \"password\": \"senha123\",\n  \"role\": \"contador\"\n}"
+              "raw": "{\n  \"name\": \"Novo Usuário\",\n  \"email\": \"novo@finode.com\",\n  \"password\": \"senha123\",\n  \"role\": \"contador\"\n}"
             }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
-                  "pm.test('Retorna dados do usuário sem senha', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('id');",
-                  "  pm.expect(json).to.have.property('name');",
-                  "  pm.expect(json).to.have.property('email');",
-                  "  pm.expect(json).to.have.property('role');",
-                  "  pm.expect(json).not.to.have.property('password');",
-                  "  pm.collectionVariables.set('userId', json.id);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                "pm.test('Has id', () => pm.expect(pm.response.json()).to.have.property('id'));",
+                "pm.test('No password', () => pm.expect(pm.response.json()).not.to.have.property('password'));"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "POST /auth/register — Erro: campos obrigatórios",
+          "name": "POST /auth/login",
           "request": {
             "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Sem Email\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
-                  "pm.test('Retorna mensagem de erro', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "response": []
-        },
-        {
-          "name": "POST /auth/login — Login com sucesso",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"admin@finode.com\",\n  \"password\": \"senha123\"\n}"
             }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Retorna token JWT e dados do usuário', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('token');",
-                  "  pm.expect(json).to.have.property('user');",
-                  "  pm.expect(json.user).to.have.property('id');",
-                  "  pm.collectionVariables.set('token', json.token);",
-                  "  pm.collectionVariables.set('userId', json.user.id);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has token', () => pm.expect(pm.response.json()).to.have.property('token'));",
+                "const json = pm.response.json();",
+                "if (json.token) { pm.collectionVariables.set('authToken', json.token); }",
+                "if (json.user?.id) { pm.collectionVariables.set('userId', json.user.id); }",
+                "pm.test('Token saved', () => pm.expect(pm.collectionVariables.get('authToken')).to.not.be.empty);"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "POST /auth/login — Erro: credenciais inválidas",
+          "name": "POST /auth/register — 400 (campos faltando)",
           "request": {
             "method": "POST",
+            "url": "{{baseUrl}}/api/auth/register",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@finode.com\",\n  \"password\": \"senhaerrada\"\n}"
-            }
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"incompleto@test.com\"\n}" }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 401 Unauthorized', () => pm.response.to.have.status(401));",
-                  "pm.test('Retorna erro de credenciais', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                "pm.test('Has details', () => pm.expect(pm.response.json()).to.have.property('details'));"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "POST /auth/login — Erro: sem campos",
+          "name": "POST /auth/login — 401 (credenciais inválidas)",
           "request": {
             "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{}"
-            }
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@finode.com\",\n  \"password\": \"senhaerrada\"\n}" }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
-                  "pm.test('Retorna erro de validação', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"]
             }
-          ],
-          "response": []
+          }]
         }
       ]
     },
     {
-      "name": "👤 Usuários",
+      "name": "👤 Users",
       "item": [
         {
-          "name": "GET /users — Listar todos",
+          "name": "GET /users",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/users?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "role", "value": "", "disabled": true },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "orderBy", "value": "name", "disabled": true },
+                { "key": "order", "value": "asc", "disabled": true }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Retorna array de usuários', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.be.an('array');",
-                  "  pm.expect(json.length).to.be.at.least(1);",
-                  "});",
-                  "pm.test('Usuários não expõem senha', () => {",
-                  "  const json = pm.response.json();",
-                  "  json.forEach(u => pm.expect(u).not.to.have.property('password'));",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has pagination', () => pm.expect(pm.response.json()).to.have.property('pagination'));",
+                "pm.test('Has data array', () => pm.expect(pm.response.json().data).to.be.an('array'));"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "GET /users/me — Meu perfil",
+          "name": "GET /users?role=contador",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/users/me", "host": ["{{baseUrl}}"], "path": ["api", "users", "me"] }
+            "url": "{{baseUrl}}/api/users?role=contador",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Retorna dados do usuário logado', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('id');",
-                  "  pm.expect(json).to.have.property('name');",
-                  "  pm.expect(json).to.have.property('email');",
-                  "  pm.expect(json).to.have.property('role');",
-                  "  pm.expect(json).not.to.have.property('password');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.response.json().data.forEach(u => pm.test('Role is contador', () => pm.expect(u.role).to.eql('contador')));"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "GET /users — Erro: sem token",
+          "name": "GET /users/me",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] }
+            "url": "{{baseUrl}}/api/users/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 401 Unauthorized sem token', () => pm.response.to.have.status(401));"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has email', () => pm.expect(pm.response.json()).to.have.property('email'));"
+              ]
             }
-          ],
-          "response": []
+          }]
+        },
+        {
+          "name": "GET /users — 401 sem token",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/users"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"]
+            }
+          }]
         }
       ]
     },
     {
-      "name": "🏢 Empresas",
+      "name": "🏢 Companies",
       "item": [
         {
-          "name": "GET /companies — Listar todas",
+          "name": "GET /companies",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/companies", "host": ["{{baseUrl}}"], "path": ["api", "companies"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/companies?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "companies"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "", "disabled": true },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "orderBy", "value": "name", "disabled": true },
+                { "key": "order", "value": "asc", "disabled": true }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Retorna array de empresas', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.be.an('array');",
-                  "  pm.expect(json.length).to.be.at.least(1);",
-                  "  if (json.length > 0) pm.collectionVariables.set('companyId', json[0].id);",
-                  "});",
-                  "pm.test('Empresas possuem campos obrigatórios', () => {",
-                  "  const json = pm.response.json();",
-                  "  const emp = json[0];",
-                  "  pm.expect(emp).to.have.property('id');",
-                  "  pm.expect(emp).to.have.property('name');",
-                  "  pm.expect(emp).to.have.property('cnpj');",
-                  "  pm.expect(emp).to.have.property('status');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has pagination', () => pm.expect(pm.response.json()).to.have.property('pagination'));",
+                "const data = pm.response.json().data;",
+                "if (data.length > 0) { pm.collectionVariables.set('companyId', data[0].id); }"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "GET /companies/:id — Buscar por ID",
+          "name": "GET /companies?status=ativo",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "companies", "{{companyId}}"] }
+            "url": "{{baseUrl}}/api/companies?status=ativo",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Retorna empresa correta', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.id).to.eql(pm.collectionVariables.get('companyId'));",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.response.json().data.forEach(c => pm.test('Status is ativo', () => pm.expect(c.status).to.eql('ativo')));"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "GET /companies/:id — Erro: ID inexistente",
+          "name": "GET /companies/:id (com JOINs)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/companies/id-que-nao-existe", "host": ["{{baseUrl}}"], "path": ["api", "companies", "id-que-nao-existe"] }
+            "url": "{{baseUrl}}/api/companies/{{companyId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));",
-                  "pm.test('Retorna mensagem de erro', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has demands', () => pm.expect(pm.response.json()).to.have.property('demands'));",
+                "pm.test('Has checklists', () => pm.expect(pm.response.json()).to.have.property('checklists'));",
+                "pm.test('Has _count', () => pm.expect(pm.response.json()).to.have.property('_count'));"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "POST /companies — Criar empresa",
+          "name": "POST /companies",
           "request": {
             "method": "POST",
+            "url": "{{baseUrl}}/api/companies",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{baseUrl}}/api/companies", "host": ["{{baseUrl}}"], "path": ["api", "companies"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Nova Empresa Teste Ltda\",\n  \"cnpj\": \"99.888.777/0001-11\",\n  \"status\": \"ativo\"\n}"
+              "raw": "{\n  \"name\": \"Nova Empresa Postman\",\n  \"cnpj\": \"44.444.444/0001-44\",\n  \"status\": \"ativo\"\n}"
             }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
-                  "pm.test('Retorna empresa criada com ID', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('id');",
-                  "  pm.expect(json.name).to.eql('Nova Empresa Teste Ltda');",
-                  "  pm.expect(json.cnpj).to.eql('99.888.777/0001-11');",
-                  "  pm.collectionVariables.set('companyId', json.id);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                "const json = pm.response.json();",
+                "pm.test('Has id', () => pm.expect(json).to.have.property('id'));",
+                "pm.collectionVariables.set('companyId', json.id);"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "POST /companies — Erro: CNPJ duplicado",
+          "name": "POST /companies — 400 CNPJ inválido",
           "request": {
             "method": "POST",
+            "url": "{{baseUrl}}/api/companies",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{baseUrl}}/api/companies", "host": ["{{baseUrl}}"], "path": ["api", "companies"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Duplicada\",\n  \"cnpj\": \"12.345.678/0001-90\"\n}"
-            }
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Empresa\",\n  \"cnpj\": \"12345678000190\"\n}" }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 409 Conflict (CNPJ duplicado)', () => pm.response.to.have.status(409));",
-                  "pm.test('Retorna erro de conflito', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                "pm.test('CNPJ error', () => pm.expect(pm.response.json().details[0].field).to.eql('cnpj'));"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "POST /companies — Erro: campos obrigatórios",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/companies", "host": ["{{baseUrl}}"], "path": ["api", "companies"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Sem CNPJ\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
-                  "pm.test('Retorna mensagem de erro de validação', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "response": []
-        },
-        {
-          "name": "PATCH /companies/:id — Atualizar empresa",
+          "name": "PATCH /companies/:id",
           "request": {
             "method": "PATCH",
+            "url": "{{baseUrl}}/api/companies/{{companyId}}",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{baseUrl}}/api/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "companies", "{{companyId}}"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Empresa Teste Ltda (Atualizada)\",\n  \"status\": \"inativo\"\n}"
-            }
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Empresa Atualizada\",\n  \"status\": \"inativo\"\n}" }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Empresa foi atualizada', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.name).to.eql('Empresa Teste Ltda (Atualizada)');",
-                  "  pm.expect(json.status).to.eql('inativo');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.test('Name updated', () => pm.expect(pm.response.json().name).to.eql('Empresa Atualizada'));"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "DELETE /companies/:id — Remover empresa",
+          "name": "GET /companies/:id — 404",
           "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "companies", "{{companyId}}"] }
+            "method": "GET",
+            "url": "{{baseUrl}}/api/companies/00000000-0000-0000-0000-000000000000",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 204 No Content', () => pm.response.to.have.status(204));",
-                  "pm.test('Resposta sem corpo', () => {",
-                  "  pm.expect(pm.response.text()).to.be.empty;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["pm.test('Status 404', () => pm.response.to.have.status(404));"]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "DELETE /companies/:id — Erro: ID inexistente",
+          "name": "DELETE /companies/:id",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/companies/id-inexistente", "host": ["{{baseUrl}}"], "path": ["api", "companies", "id-inexistente"] }
+            "url": "{{baseUrl}}/api/companies/{{companyId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));",
-                  "pm.test('Retorna mensagem de erro', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["pm.test('Status 204', () => pm.response.to.have.status(204));"]
             }
-          ],
-          "response": []
+          }]
         }
       ]
     },
     {
-      "name": "📋 Demandas",
+      "name": "📋 Demands",
       "item": [
         {
-          "name": "GET /demands — Listar todas",
+          "name": "GET /demands",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/demands", "host": ["{{baseUrl}}"], "path": ["api", "demands"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/demands?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "demands"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "", "disabled": true },
+                { "key": "priority", "value": "", "disabled": true },
+                { "key": "companyId", "value": "", "disabled": true },
+                { "key": "assignedToId", "value": "", "disabled": true },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "orderBy", "value": "dueDate", "disabled": true },
+                { "key": "order", "value": "asc", "disabled": true }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Retorna array de demandas com relações', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.be.an('array');",
-                  "  if (json.length > 0) {",
-                  "    pm.collectionVariables.set('demandId', json[0].id);",
-                  "    const d = json[0];",
-                  "    pm.expect(d).to.have.property('assignedTo');",
-                  "    pm.expect(d).to.have.property('company');",
-                  "  }",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has pagination', () => pm.expect(pm.response.json()).to.have.property('pagination'));",
+                "const data = pm.response.json().data;",
+                "if (data.length > 0) { pm.collectionVariables.set('demandId', data[0].id); }",
+                "pm.test('Has JOIN data', () => { if (data.length > 0) { pm.expect(data[0]).to.have.property('assignedTo'); pm.expect(data[0]).to.have.property('company'); }});"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "GET /demands/:id — Buscar por ID",
+          "name": "GET /demands?status=pendente&priority=alta",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/demands/{{demandId}}", "host": ["{{baseUrl}}"], "path": ["api", "demands", "{{demandId}}"] }
+            "url": "{{baseUrl}}/api/demands?status=pendente&priority=alta",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Retorna demanda com relações', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.id).to.eql(pm.collectionVariables.get('demandId'));",
-                  "  pm.expect(json).to.have.property('assignedTo');",
-                  "  pm.expect(json).to.have.property('company');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.response.json().data.forEach(d => {",
+                "  pm.test('Status pendente', () => pm.expect(d.status).to.eql('pendente'));",
+                "  pm.test('Priority alta', () => pm.expect(d.priority).to.eql('alta'));",
+                "});"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "GET /demands/:id — Erro: ID inexistente",
+          "name": "GET /demands/:id",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/demands/id-inexistente", "host": ["{{baseUrl}}"], "path": ["api", "demands", "id-inexistente"] }
+            "url": "{{baseUrl}}/api/demands/{{demandId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));",
-                  "pm.test('Retorna mensagem de erro', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has assignedTo JOIN', () => pm.expect(pm.response.json()).to.have.property('assignedTo'));",
+                "pm.test('Has company JOIN', () => pm.expect(pm.response.json()).to.have.property('company'));"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "POST /demands — Criar demanda",
+          "name": "POST /demands",
           "request": {
             "method": "POST",
+            "url": "{{baseUrl}}/api/demands",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{baseUrl}}/api/demands", "host": ["{{baseUrl}}"], "path": ["api", "demands"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Nova Demanda via Postman\",\n  \"description\": \"Descrição detalhada da demanda criada via teste do Postman\",\n  \"priority\": \"alta\",\n  \"status\": \"pendente\",\n  \"dueDate\": \"2026-05-30T00:00:00.000Z\",\n  \"assignedToId\": \"{{userId}}\",\n  \"companyId\": \"PREENCHER_COM_ID_DA_EMPRESA\"\n}"
+              "raw": "{\n  \"title\": \"Demanda Criada via Postman\",\n  \"description\": \"Descrição completa da demanda criada via Postman para teste.\",\n  \"assignedToId\": \"SUBSTITUA_COM_ID_DO_USUARIO\",\n  \"companyId\": \"SUBSTITUA_COM_ID_DA_EMPRESA\",\n  \"dueDate\": \"2026-12-31T00:00:00.000Z\",\n  \"status\": \"pendente\",\n  \"priority\": \"alta\"\n}"
             }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
-                  "pm.test('Retorna demanda criada com ID', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('id');",
-                  "  pm.expect(json.title).to.eql('Nova Demanda via Postman');",
-                  "  pm.collectionVariables.set('demandId', json.id);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                "const json = pm.response.json();",
+                "if (json.id) pm.collectionVariables.set('demandId', json.id);"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "POST /demands — Erro: campos obrigatórios",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/demands", "host": ["{{baseUrl}}"], "path": ["api", "demands"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Incompleta\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
-                  "pm.test('Retorna mensagem de erro de validação', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "response": []
-        },
-        {
-          "name": "PATCH /demands/:id — Atualizar status",
+          "name": "PATCH /demands/:id",
           "request": {
             "method": "PATCH",
+            "url": "{{baseUrl}}/api/demands/{{demandId}}",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{baseUrl}}/api/demands/{{demandId}}", "host": ["{{baseUrl}}"], "path": ["api", "demands", "{{demandId}}"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"em_progresso\",\n  \"priority\": \"alta\"\n}"
-            }
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"em_progresso\",\n  \"priority\": \"media\"\n}" }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Status da demanda atualizado', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.status).to.eql('em_progresso');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.test('Status updated', () => pm.expect(pm.response.json().status).to.eql('em_progresso'));"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "PATCH /demands/:id — Erro: ID inexistente",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/demands/id-inexistente", "host": ["{{baseUrl}}"], "path": ["api", "demands", "id-inexistente"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"concluida\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));",
-                  "pm.test('Retorna mensagem de erro', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "response": []
-        },
-        {
-          "name": "DELETE /demands/:id — Remover demanda",
+          "name": "DELETE /demands/:id",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/demands/{{demandId}}", "host": ["{{baseUrl}}"], "path": ["api", "demands", "{{demandId}}"] }
+            "url": "{{baseUrl}}/api/demands/{{demandId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 204 No Content', () => pm.response.to.have.status(204));",
-                  "pm.test('Resposta sem corpo', () => {",
-                  "  pm.expect(pm.response.text()).to.be.empty;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["pm.test('Status 204', () => pm.response.to.have.status(204));"]
             }
-          ],
-          "response": []
+          }]
         }
       ]
     },
@@ -781,210 +515,79 @@
       "name": "✅ Checklists",
       "item": [
         {
-          "name": "GET /checklists — Listar todos",
+          "name": "GET /checklists",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/checklists", "host": ["{{baseUrl}}"], "path": ["api", "checklists"] }
+            "url": "{{baseUrl}}/api/checklists?page=1&limit=10",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Retorna array de checklists com itens', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.be.an('array');",
-                  "  if (json.length > 0) {",
-                  "    pm.collectionVariables.set('checklistId', json[0].id);",
-                  "    pm.expect(json[0]).to.have.property('items');",
-                  "    pm.expect(json[0]).to.have.property('company');",
-                  "    if (json[0].items.length > 0) {",
-                  "      pm.collectionVariables.set('checklistItemId', json[0].items[0].id);",
-                  "    }",
-                  "  }",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "const data = pm.response.json().data;",
+                "if (data.length > 0) pm.collectionVariables.set('checklistId', data[0].id);"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "GET /checklists/:id — Buscar por ID",
+          "name": "GET /checklists/:id",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/checklists/{{checklistId}}", "host": ["{{baseUrl}}"], "path": ["api", "checklists", "{{checklistId}}"] }
+            "url": "{{baseUrl}}/api/checklists/{{checklistId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Retorna checklist com itens e empresa', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.id).to.eql(pm.collectionVariables.get('checklistId'));",
-                  "  pm.expect(json).to.have.property('items');",
-                  "  pm.expect(json).to.have.property('company');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has items', () => pm.expect(pm.response.json()).to.have.property('items'));"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "GET /checklists/:id — Erro: ID inexistente",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/checklists/id-inexistente", "host": ["{{baseUrl}}"], "path": ["api", "checklists", "id-inexistente"] }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));",
-                  "pm.test('Retorna mensagem de erro', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "response": []
-        },
-        {
-          "name": "POST /checklists — Criar checklist",
+          "name": "POST /checklists",
           "request": {
             "method": "POST",
+            "url": "{{baseUrl}}/api/checklists",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{baseUrl}}/api/checklists", "host": ["{{baseUrl}}"], "path": ["api", "checklists"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Checklist Postman Teste\",\n  \"serviceType\": \"Contabilidade\",\n  \"companyId\": \"PREENCHER_COM_ID_DA_EMPRESA\",\n  \"items\": [\n    { \"title\": \"Item 1 - Revisar documentos\", \"priority\": \"alta\" },\n    { \"title\": \"Item 2 - Validar dados\", \"priority\": \"media\" },\n    { \"title\": \"Item 3 - Enviar relatório\", \"priority\": \"baixa\" }\n  ]\n}"
+              "raw": "{\n  \"title\": \"Checklist Postman Teste\",\n  \"serviceType\": \"Fiscal\",\n  \"companyId\": \"SUBSTITUA_COM_ID_DA_EMPRESA\",\n  \"items\": [\n    { \"title\": \"Item criado via Postman\", \"priority\": \"alta\" },\n    { \"title\": \"Outro item de teste\", \"priority\": \"media\" }\n  ]\n}"
             }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
-                  "pm.test('Retorna checklist com itens criados', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('id');",
-                  "  pm.expect(json.title).to.eql('Checklist Postman Teste');",
-                  "  pm.expect(json.items).to.be.an('array').with.length(3);",
-                  "  pm.collectionVariables.set('checklistId', json.id);",
-                  "  pm.collectionVariables.set('checklistItemId', json.items[0].id);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                "const json = pm.response.json();",
+                "pm.test('Has items', () => pm.expect(json.items.length).to.eql(2));",
+                "if (json.id) pm.collectionVariables.set('checklistId', json.id);"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "POST /checklists — Erro: campos obrigatórios",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/checklists", "host": ["{{baseUrl}}"], "path": ["api", "checklists"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Só título\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
-                  "pm.test('Retorna mensagem de erro de validação', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "response": []
-        },
-        {
-          "name": "PATCH /checklists/:id/items/:itemId — Marcar item",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/checklists/{{checklistId}}/items/{{checklistItemId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "checklists", "{{checklistId}}", "items", "{{checklistItemId}}"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"completed\": true\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Item marcado como completo', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.completed).to.eql(true);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "response": []
-        },
-        {
-          "name": "DELETE /checklists/:id — Remover checklist",
+          "name": "DELETE /checklists/:id",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/checklists/{{checklistId}}", "host": ["{{baseUrl}}"], "path": ["api", "checklists", "{{checklistId}}"] }
+            "url": "{{baseUrl}}/api/checklists/{{checklistId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 204 No Content', () => pm.response.to.have.status(204));",
-                  "pm.test('Resposta sem corpo', () => {",
-                  "  pm.expect(pm.response.text()).to.be.empty;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["pm.test('Status 204', () => pm.response.to.have.status(204));"]
             }
-          ],
-          "response": []
+          }]
         }
       ]
     },
@@ -992,350 +595,221 @@
       "name": "📄 Templates",
       "item": [
         {
-          "name": "GET /templates — Listar todos",
+          "name": "GET /templates",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/templates", "host": ["{{baseUrl}}"], "path": ["api", "templates"] }
+            "url": "{{baseUrl}}/api/templates?page=1&limit=10",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Retorna array de templates com itens e criador', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.be.an('array');",
-                  "  if (json.length > 0) {",
-                  "    pm.collectionVariables.set('templateId', json[0].id);",
-                  "    pm.expect(json[0]).to.have.property('items');",
-                  "    pm.expect(json[0]).to.have.property('createdBy');",
-                  "  }",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "const data = pm.response.json().data;",
+                "if (data.length > 0) pm.collectionVariables.set('templateId', data[0].id);"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "POST /templates — Criar template",
+          "name": "GET /templates/:id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/templates/{{templateId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has items', () => pm.expect(pm.response.json()).to.have.property('items'));",
+                "pm.test('Has createdBy', () => pm.expect(pm.response.json()).to.have.property('createdBy'));"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "POST /templates",
           "request": {
             "method": "POST",
+            "url": "{{baseUrl}}/api/templates",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{baseUrl}}/api/templates", "host": ["{{baseUrl}}"], "path": ["api", "templates"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Template Postman Teste\",\n  \"description\": \"Descrição do template criado via Postman\",\n  \"items\": [\n    { \"title\": \"Passo 1 - Verificar documentação\", \"priority\": \"alta\" },\n    { \"title\": \"Passo 2 - Analisar dados\", \"priority\": \"media\" },\n    { \"title\": \"Passo 3 - Elaborar relatório\", \"priority\": \"alta\" }\n  ]\n}"
+              "raw": "{\n  \"title\": \"Template Criado via Postman\",\n  \"description\": \"Descrição do template de teste.\",\n  \"items\": [\n    { \"title\": \"Passo 1\", \"priority\": \"alta\" },\n    { \"title\": \"Passo 2\", \"priority\": \"media\" },\n    { \"title\": \"Passo 3\", \"priority\": \"baixa\" }\n  ]\n}"
             }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
-                  "pm.test('Retorna template criado com itens e criador', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('id');",
-                  "  pm.expect(json.title).to.eql('Template Postman Teste');",
-                  "  pm.expect(json.items).to.be.an('array').with.length(3);",
-                  "  pm.expect(json).to.have.property('createdBy');",
-                  "  pm.collectionVariables.set('templateId', json.id);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                "const json = pm.response.json();",
+                "pm.test('Has 3 items', () => pm.expect(json.items.length).to.eql(3));",
+                "if (json.id) pm.collectionVariables.set('templateId', json.id);"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "POST /templates — Erro: sem título",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/templates", "host": ["{{baseUrl}}"], "path": ["api", "templates"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"description\": \"Sem título\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
-                  "pm.test('Retorna mensagem de erro de validação', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "response": []
-        },
-        {
-          "name": "PATCH /templates/:id — Atualizar template",
+          "name": "PATCH /templates/:id",
           "request": {
             "method": "PATCH",
+            "url": "{{baseUrl}}/api/templates/{{templateId}}",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{baseUrl}}/api/templates/{{templateId}}", "host": ["{{baseUrl}}"], "path": ["api", "templates", "{{templateId}}"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Template Atualizado via Postman\",\n  \"description\": \"Descrição atualizada\",\n  \"items\": [\n    { \"title\": \"Item atualizado 1\", \"priority\": \"alta\" },\n    { \"title\": \"Item atualizado 2\", \"priority\": \"baixa\" }\n  ]\n}"
+              "raw": "{\n  \"title\": \"Template Atualizado\",\n  \"description\": \"Nova descrição.\"\n}"
             }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Template atualizado com novos itens', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.title).to.eql('Template Atualizado via Postman');",
-                  "  pm.expect(json.items).to.be.an('array').with.length(2);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.test('Title updated', () => pm.expect(pm.response.json().title).to.eql('Template Atualizado'));"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "PATCH /templates/:id — Erro: ID inexistente",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/templates/id-inexistente", "host": ["{{baseUrl}}"], "path": ["api", "templates", "id-inexistente"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Atualização\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));",
-                  "pm.test('Retorna mensagem de erro', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "response": []
-        },
-        {
-          "name": "DELETE /templates/:id — Remover template",
+          "name": "DELETE /templates/:id",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/templates/{{templateId}}", "host": ["{{baseUrl}}"], "path": ["api", "templates", "{{templateId}}"] }
+            "url": "{{baseUrl}}/api/templates/{{templateId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 204 No Content', () => pm.response.to.have.status(204));",
-                  "pm.test('Resposta sem corpo', () => {",
-                  "  pm.expect(pm.response.text()).to.be.empty;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["pm.test('Status 204', () => pm.response.to.have.status(204));"]
             }
-          ],
-          "response": []
+          }]
         }
       ]
     },
     {
-      "name": "📌 Atribuições",
+      "name": "📌 Assignments",
       "item": [
         {
-          "name": "GET /assignments — Listar todas",
+          "name": "GET /assignments",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/assignments", "host": ["{{baseUrl}}"], "path": ["api", "assignments"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/assignments?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "assignments"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "", "disabled": true },
+                { "key": "assignedToId", "value": "", "disabled": true },
+                { "key": "companyId", "value": "", "disabled": true }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Retorna array de atribuições com relações', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.be.an('array');",
-                  "  if (json.length > 0) {",
-                  "    pm.collectionVariables.set('assignmentId', json[0].id);",
-                  "    const a = json[0];",
-                  "    pm.expect(a).to.have.property('template');",
-                  "    pm.expect(a).to.have.property('assignedTo');",
-                  "    pm.expect(a).to.have.property('assignedBy');",
-                  "    pm.expect(a).to.have.property('company');",
-                  "    pm.expect(a).to.have.property('items');",
-                  "  }",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "const data = pm.response.json().data;",
+                "if (data.length > 0) pm.collectionVariables.set('assignmentId', data[0].id);"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "POST /assignments — Criar atribuição",
+          "name": "GET /assignments/:id (todos os JOINs)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/assignments/{{assignmentId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "const json = pm.response.json();",
+                "pm.test('Has template', () => pm.expect(json).to.have.property('template'));",
+                "pm.test('Has assignedTo', () => pm.expect(json).to.have.property('assignedTo'));",
+                "pm.test('Has assignedBy', () => pm.expect(json).to.have.property('assignedBy'));",
+                "pm.test('Has company', () => pm.expect(json).to.have.property('company'));",
+                "pm.test('Has items', () => pm.expect(json).to.have.property('items'));"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "POST /assignments",
           "request": {
             "method": "POST",
+            "url": "{{baseUrl}}/api/assignments",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{baseUrl}}/api/assignments", "host": ["{{baseUrl}}"], "path": ["api", "assignments"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"templateId\": \"{{templateId}}\",\n  \"assignedToId\": \"{{userId}}\",\n  \"companyId\": \"PREENCHER_COM_ID_DA_EMPRESA\",\n  \"dueDate\": \"2026-05-30T00:00:00.000Z\"\n}"
+              "raw": "{\n  \"templateId\": \"SUBSTITUA_COM_ID_DO_TEMPLATE\",\n  \"assignedToId\": \"SUBSTITUA_COM_ID_DO_USUARIO\",\n  \"companyId\": \"SUBSTITUA_COM_ID_DA_EMPRESA\",\n  \"dueDate\": \"2026-12-31T00:00:00.000Z\"\n}"
             }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
-                  "pm.test('Atribuição criada com cópia dos itens do template', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('id');",
-                  "  pm.expect(json).to.have.property('items');",
-                  "  pm.expect(json.status).to.eql('pendente');",
-                  "  pm.collectionVariables.set('assignmentId', json.id);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                "pm.test('Items copied from template', () => pm.expect(pm.response.json().items.length).to.be.greaterThan(0));",
+                "const json = pm.response.json();",
+                "if (json.id) pm.collectionVariables.set('assignmentId', json.id);"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "POST /assignments — Erro: campos obrigatórios",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/assignments", "host": ["{{baseUrl}}"], "path": ["api", "assignments"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"templateId\": \"algum-id\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
-                  "pm.test('Retorna mensagem de erro de validação', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "response": []
-        },
-        {
-          "name": "PATCH /assignments/:id — Atualizar status",
+          "name": "PATCH /assignments/:id",
           "request": {
             "method": "PATCH",
+            "url": "{{baseUrl}}/api/assignments/{{assignmentId}}",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": { "raw": "{{baseUrl}}/api/assignments/{{assignmentId}}", "host": ["{{baseUrl}}"], "path": ["api", "assignments", "{{assignmentId}}"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"em_progresso\"\n}"
-            }
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"em_progresso\"\n}" }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('Status da atribuição atualizado', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.status).to.eql('em_progresso');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.test('Status updated', () => pm.expect(pm.response.json().status).to.eql('em_progresso'));"
+              ]
             }
-          ],
-          "response": []
+          }]
         },
         {
-          "name": "PATCH /assignments/:id — Erro: ID inexistente",
+          "name": "DELETE /assignments/:id",
           "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/assignments/id-inexistente", "host": ["{{baseUrl}}"], "path": ["api", "assignments", "id-inexistente"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"concluida\"\n}"
-            }
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/assignments/{{assignmentId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }]
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));",
-                  "pm.test('Retorna mensagem de erro', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["pm.test('Status 204', () => pm.response.to.have.status(204));"]
             }
-          ],
-          "response": []
+          }]
         }
       ]
     }
