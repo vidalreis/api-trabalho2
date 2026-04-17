@@ -15,7 +15,7 @@
   "keywords": ["api", "rest", "express", "prisma", "sqlite", "jwt"],
   "author": "",
   "license": "ISC",
-  "type": "module",
+
   "dependencies": {
     "@prisma/client": "^6.0.0",
     "bcrypt": "^5.1.1",
